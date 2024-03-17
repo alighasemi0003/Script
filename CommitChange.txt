@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# نام commit ابتدایی
+start_commit="commit1"
+
+# نام commit پایانی
+end_commit="commit2"
+
+# دریافت تاریخچه commit ها
+git_log=$(git log --pretty="%H %an" $start_commit..$end_commit)
+
+declare -A changes
+
+# محاسبه تعداد خطوط تغییرات هر شخص
+while read -r line; do
+    commit_hash=$(echo $line | awk '{print $1}')
+    author=$(echo $line | awk '{print $2}')
+    num_lines_changed=$(git diff --shortstat $commit_hash~1 $commit_hash | grep "files changed" | awk '{print $1}')
+    if [ -z "${changes[$author]}" ]; then
+        changes[$author]=$num_lines_changed
+    else
+        changes[$author]=$((${changes[$author]} + $num_lines_changed))
+    fi
+done <<< "$git_log"
+
+# چاپ نتایج
+for author in "${!changes[@]}"; do
+    echo "Author: $author, Lines changed: ${changes[$author]}"
+done
